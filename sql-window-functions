@@ -1,1 +1,51 @@
+-- WF. Part 1
+
+-- task 1
+SELECT 
+    first_name, 
+    last_name, 
+    salary, 
+    industry,
+    (SELECT first_name || ' ' || last_name
+     FROM salary s2
+     WHERE s2.salary = (SELECT MAX(salary) 
+                        FROM salary 
+                        WHERE industry = s1.industry) 
+     AND s2.industry = s1.industry
+     LIMIT 1) AS name_highest_sal
+FROM salary s1
+ORDER BY industry;
+
+SELECT 
+    first_name, 
+    last_name, 
+    salary, 
+    industry,
+    (SELECT first_name || ' ' || last_name
+     FROM salary s2
+     WHERE s2.salary = (SELECT MIN(salary) 
+                        FROM salary 
+                        WHERE industry = s1.industry) 
+     AND s2.industry = s1.industry
+     LIMIT 1) AS name_lowest_sal
+FROM salary s1
+ORDER BY industry;
+
+SELECT 
+    first_name, 
+    last_name, 
+    salary, 
+    industry,
+    FIRST_VALUE(first_name || ' ' || last_name) OVER (PARTITION BY industry ORDER BY salary DESC) AS name_highest_sal
+FROM salary
+ORDER BY industry;
+
+SELECT 
+    first_name, 
+    last_name, 
+    salary, 
+    industry,
+    FIRST_VALUE(first_name || ' ' || last_name) OVER (PARTITION BY industry ORDER BY salary ASC) AS name_lowest_sal
+FROM salary
+ORDER BY industry;
 
