@@ -1,1 +1,68 @@
+-- Sorting and grouping. Part 1
+
+-- task 1
+SELECT 
+	city, 
+	CASE 
+		WHEN age BETWEEN 0 AND 20 THEN 'young'
+        WHEN age BETWEEN 21 AND 49 THEN 'adult'
+        WHEN age >= 50 THEN 'old'
+    END AS age_category,
+    COUNT(*) AS number_of_buyers
+FROM users
+GROUP BY city, age_category
+ORDER BY number_of_buyers DESC;
+
+-- task 2
+SELECT category, ROUND(AVG(price), 2) AS avg_price FROM products
+WHERE name ILIKE '%hair%' 
+	OR name ILIKE '%home%'
+GROUP BY category;
+
+-- Sorting and grouping. Part 2
+
+-- task 1
+SELECT 
+	seller_id, 
+	COUNT(category) AS total_categ, 
+	ROUND(AVG(rating), 2) AS avg_rating,
+	SUM(revenue) AS total_revenue,
+	CASE -- если у одного продавца есть категории, имеющие одинаковое имя, но зарегистрированные в разные даты, то они считаются разными категориями
+		WHEN SUM(revenue) >= 50000 AND COUNT(category) > 1 THEN 'rich'
+        WHEN SUM(revenue) < 50000 AND COUNT(category) > 1 THEN 'poor'
+    END AS seller_type
+FROM sellers
+GROUP BY seller_id
+HAVING -- исключаем продавцов, которые не принадлежат категориям poor и rich
+    (SUM(revenue) >= 50000 AND COUNT(category) > 1)
+    OR (SUM(revenue) < 50000 AND COUNT(category) > 1)
+ORDER BY seller_id ASC;
+
+-- task 2
+SELECT 
+	seller_id, 
+    EXTRACT(YEAR FROM AGE(TO_DATE('24/11/2024', 'DD/MM/YYYY'), TO_DATE(MIN(date_reg), 'DD/MM/YYYY'))) * 12 + 
+    EXTRACT(MONTH FROM AGE(TO_DATE('24/11/2024', 'DD/MM/YYYY'), TO_DATE(min(date_reg), 'DD/MM/YYYY'))) AS month_from_registration,
+	(SELECT  -- среди всех неуспешных продавцов ищем наибольший и наименьший срок доставки
+		MAX(delivery_days) - MIN(delivery_days)
+	FROM sellers 
+	WHERE seller_id IN (
+		SELECT seller_id FROM sellers -- выбираем id неуспешных продавцов
+		GROUP BY seller_id
+	    HAVING SUM(revenue) < 50000 AND COUNT(category) > 1
+	    )
+	) AS max_delivery_difference
+FROM sellers 
+GROUP BY seller_id
+HAVING SUM(revenue) < 50000 AND COUNT(category) > 1
+ORDER BY seller_id ASC;
+	
+-- task 3
+SELECT 
+	seller_id
+FROM sellers
+group by seller_id
+HAVING
+    SUM(revenue) >= 75000 AND COUNT(category) = 2 and (EXTRACT(YEAR FROM TO_DATE(min(date_reg), 'DD/MM/YYYY')) = 2022)
+ORDER BY seller_id ASC;
 
