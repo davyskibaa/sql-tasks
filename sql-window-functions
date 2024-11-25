@@ -1,6 +1,4 @@
 -- WF. Part 1
-
--- task 1
 SELECT 
     first_name, 
     last_name, 
@@ -49,7 +47,7 @@ SELECT
 FROM salary
 ORDER BY industry;
 
--- task 2
+-- WF. Part 2
 SELECT DISTINCT
     sh."SHOPNUMBER",
     sh."CITY",
