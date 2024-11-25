@@ -35,24 +35,37 @@ ORDER BY total_sum DESC;
 
 -- task 3
 SELECT 
-	customers_new.customer_id, 
-	customers_new.name, 
-	COUNT(*) AS number_of_orders,
-	SUM(order_ammount) AS total_sum,
-	AGE(TO_DATE(shipment_date, 'YYYY-MM-DD'), TO_DATE(order_date, 'YYYY-MM-DD')) AS waiting_time
-FROM customers_new
-JOIN orders_new 
-ON customers_new.customer_id = orders_new.customer_id 
-GROUP BY customers_new.customer_id, customers_new.name
-HAVING COUNT(*) = (
-    SELECT MAX(order_count)
-    FROM (
-        SELECT COUNT(*) AS order_count
-        FROM orders_new
-        GROUP BY customer_id
-    ) AS subquery
-)
-ORDER BY total_sum DESC;
+    c.customer_id,
+    c.name, 
+    COUNT(CASE 
+        WHEN (TO_TIMESTAMP(o.shipment_date, 'YYYY-MM-DD HH24:MI:SS') - TO_TIMESTAMP(o.order_date, 'YYYY-MM-DD HH24:MI:SS')) > INTERVAL '5 days' 
+        THEN 1 
+        ELSE NULL 
+    END) AS delayed_orders_count,  -- количество заказов с задержкой
+    COUNT(CASE 
+        WHEN o.order_status = 'Cancel' THEN 1 
+        ELSE NULL 
+    END) AS canceled_orders_count, -- количество отмененных заказов
+    SUM(CASE 
+        WHEN (TO_TIMESTAMP(o.shipment_date, 'YYYY-MM-DD HH24:MI:SS') - TO_TIMESTAMP(o.order_date, 'YYYY-MM-DD HH24:MI:SS')) > INTERVAL '5 days' 
+            OR o.order_status = 'Cancel' THEN o.order_ammount 
+        ELSE 0 
+    END) AS total_sum -- сумма отменных и задержанных заказов
+FROM customers_new c
+JOIN orders_new o 
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.name
+HAVING 
+	COUNT(CASE 
+        WHEN (TO_TIMESTAMP(o.shipment_date, 'YYYY-MM-DD HH24:MI:SS') - TO_TIMESTAMP(o.order_date, 'YYYY-MM-DD HH24:MI:SS')) > INTERVAL '5 days' 
+        THEN 1 
+        ELSE NULL 
+    END) > 0
+OR COUNT(CASE 
+         WHEN o.order_status = 'Cancel' THEN 1 
+         ELSE NULL 
+    END) > 0 
+ORDER BY total_sum DESC; 
 
 -- Join. Part 2
 
