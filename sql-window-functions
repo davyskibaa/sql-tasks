@@ -49,3 +49,66 @@ SELECT
 FROM salary
 ORDER BY industry;
 
+-- task 2
+SELECT DISTINCT
+    sh."SHOPNUMBER",
+    sh."CITY",
+    sh."ADDRESS",
+    SUM(s."QTY") OVER (PARTITION BY sh."SHOPNUMBER") AS "SUM_QTY",
+    SUM(s."QTY" * g."PRICE") OVER (PARTITION BY sh."SHOPNUMBER") AS "SUM_QTY_PRICE"
+FROM "sales" s
+JOIN "goods" g ON s."ID_GOOD" = g."ID_GOOD"
+JOIN "shops" sh ON s."SHOPNUMBER" = sh."SHOPNUMBER"
+WHERE s."DATE" = '02.01.2016'
+ORDER BY sh."SHOPNUMBER";
+
+SELECT 
+    s."DATE" AS "DATE_",
+    sh."CITY",
+    SUM(s."QTY" * g."PRICE") / 
+        SUM(SUM(s."QTY" * g."PRICE")) OVER (PARTITION BY s."DATE") AS "SUM_SALES_REL"
+FROM "sales" s
+JOIN "goods" g ON s."ID_GOOD" = g."ID_GOOD"
+JOIN "shops" sh ON s."SHOPNUMBER" = sh."SHOPNUMBER"
+WHERE g."CATEGORY" = 'ЧИСТОТА'
+GROUP BY s."DATE", sh."CITY"
+ORDER BY s."DATE", sh."CITY";
+
+WITH ranked_sales AS (
+    SELECT 
+        s."DATE" AS "DATE_",
+        s."SHOPNUMBER",
+        s."ID_GOOD",
+        SUM(s."QTY") AS "TOTAL_QUANTITY",
+        RANK() OVER (PARTITION BY s."DATE", s."SHOPNUMBER" ORDER BY SUM(s."QTY") DESC) AS rank
+    FROM "sales" s
+    JOIN "goods" g ON s."ID_GOOD" = g."ID_GOOD"
+    GROUP BY s."DATE", s."SHOPNUMBER", s."ID_GOOD"
+)
+SELECT 
+    "DATE_",
+    "SHOPNUMBER",
+    "ID_GOOD"
+FROM ranked_sales
+WHERE rank <= 3
+ORDER BY "DATE_", "SHOPNUMBER", rank;
+
+WITH sales_by_date AS (
+    SELECT 
+        s."DATE" AS "DATE_",
+        s."SHOPNUMBER",
+        g."CATEGORY",
+        SUM(s."QTY" * g."PRICE") AS "SALES_RUB"
+    FROM "sales" s
+    JOIN "goods" g ON s."ID_GOOD" = g."ID_GOOD"
+    JOIN "shops" sh ON s."SHOPNUMBER" = sh."SHOPNUMBER"
+    WHERE sh."CITY" = 'СПб'
+    GROUP BY s."DATE", s."SHOPNUMBER", g."CATEGORY"
+)
+SELECT 
+    sb."DATE_",
+    sb."SHOPNUMBER",
+    sb."CATEGORY",
+    COALESCE(LAG(sb."SALES_RUB") OVER (PARTITION BY sb."SHOPNUMBER", sb."CATEGORY" ORDER BY sb."DATE_"), 0) AS "PREV_SALES"
+FROM sales_by_date sb
+ORDER BY sb."SHOPNUMBER", sb."CATEGORY", sb."DATE_";
