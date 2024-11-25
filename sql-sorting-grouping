@@ -42,7 +42,7 @@ ORDER BY seller_id ASC;
 SELECT 
 	seller_id, 
     EXTRACT(YEAR FROM AGE(TO_DATE('24/11/2024', 'DD/MM/YYYY'), TO_DATE(MIN(date_reg), 'DD/MM/YYYY'))) * 12 + 
-    EXTRACT(MONTH FROM AGE(TO_DATE('24/11/2024', 'DD/MM/YYYY'), TO_DATE(min(date_reg), 'DD/MM/YYYY'))) AS month_from_registration,
+    EXTRACT(MONTH FROM AGE(TO_DATE('24/11/2024', 'DD/MM/YYYY'), TO_DATE((date_reg), 'DD/MM/YYYY'))) AS month_from_registration,
 	(SELECT  -- среди всех неуспешных продавцов ищем наибольший и наименьший срок доставки
 		MAX(delivery_days) - MIN(delivery_days)
 	FROM sellers 
@@ -59,11 +59,16 @@ ORDER BY seller_id ASC;
 	
 -- task 3
 SELECT 
-	seller_id
-FROM sellers
-group by seller_id
-HAVING
-    SUM(revenue) >= 75000 AND COUNT(category) = 2 and (EXTRACT(YEAR FROM TO_DATE(min(date_reg), 'DD/MM/YYYY')) = 2022)
-ORDER BY seller_id ASC;
-
-...
+    seller_id,
+    STRING_AGG(DISTINCT category, ' - ' ORDER BY category) AS category_pair
+FROM sellers s1
+WHERE EXISTS ( -- проверка на то, чтобы хотя бы одна дата регистрации соответствовала 2022 году
+    SELECT 1
+    FROM sellers s2
+    WHERE s2.seller_id = s1.seller_id
+    AND EXTRACT(YEAR FROM TO_DATE(s2.date_reg, 'DD/MM/YYYY')) = 2022 
+)
+GROUP BY seller_id
+HAVING COUNT(DISTINCT category) = 2 
+    AND SUM(revenue) > 75000
+ORDER BY seller_id;
