@@ -47,6 +47,7 @@ SELECT
 FROM salary
 ORDER BY industry;
 
+
 -- WF. Part 2
 SELECT DISTINCT
     sh."SHOPNUMBER",
@@ -110,3 +111,63 @@ SELECT
     COALESCE(LAG(sb."SALES_RUB") OVER (PARTITION BY sb."SHOPNUMBER", sb."CATEGORY" ORDER BY sb."DATE_"), 0) AS "PREV_SALES"
 FROM sales_by_date sb
 ORDER BY sb."SHOPNUMBER", sb."CATEGORY", sb."DATE_";
+
+
+-- WF. Part 3
+CREATE TABLE query (
+    searchid SERIAL PRIMARY KEY,
+    year INT,
+    month INT,
+    day INT,
+    userid INT,
+    ts INT,
+    devicetype VARCHAR(50),
+    deviceid INT,
+    query TEXT
+);
+
+INSERT INTO query (year, month, day, userid, ts, devicetype, deviceid, query)
+VALUES
+(2024, 11, 1, 1001, 1698900000, 'android', 1, 'купить'),
+(2024, 11, 1, 1001, 1698900300, 'android', 1, 'куртку'),
+(2024, 11, 1, 1002, 1698900900, 'android', 1, 'купить'),
+(2024, 11, 1, 1002, 1698901200, 'android', 1, 'телефон'),
+(2024, 11, 1, 1003, 1698901500, 'android', 2, 'купит');
+
+WITH query_with_next AS (
+    SELECT 
+        searchid,
+        year,
+        month,
+        day,
+        userid,
+        ts,
+        devicetype,
+        deviceid,
+        query,
+        LEAD(ts) OVER (PARTITION BY userid, deviceid ORDER BY ts) AS next_ts, 
+        LEAD(query) OVER (PARTITION BY userid, deviceid ORDER BY ts) AS next_query
+    FROM query
+    WHERE devicetype = 'android'
+    AND year = 2024 AND month = 11 AND day = 1
+)
+SELECT 
+    year,
+    month,
+    day,
+    userid,
+    ts,
+    devicetype,
+    deviceid,
+    query,
+    next_query,
+    CASE
+        WHEN next_ts IS NULL THEN 1  -- если это последний запрос пользователя
+        WHEN next_ts - ts > 180 THEN 1  -- если разница во времени больше 3 минут
+        WHEN next_ts - ts > 60 AND LENGTH(next_query) < LENGTH(query) THEN 2  -- если разница больше 1 минуты и следующий запрос короче
+        ELSE 0  -- в других случаях
+    END AS is_final
+FROM query_with_next
+WHERE 
+    (next_ts IS NULL OR next_ts - ts > 180 OR (next_ts - ts > 60 AND LENGTH(next_query) < LENGTH(query))) 
+ORDER BY ts;
