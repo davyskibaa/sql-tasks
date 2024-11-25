@@ -66,3 +66,4 @@ HAVING
     SUM(revenue) >= 75000 AND COUNT(category) = 2 and (EXTRACT(YEAR FROM TO_DATE(min(date_reg), 'DD/MM/YYYY')) = 2022)
 ORDER BY seller_id ASC;
 
+...
